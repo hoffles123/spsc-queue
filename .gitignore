@@ -1,2 +1,5 @@
 .idea
-cmake-*
+debox-debug
+devbox-release
+debug
+release

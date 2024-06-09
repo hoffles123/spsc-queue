@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <queue>
+#include <mutex>
 
 // lock-based spsc queue
 template<typename T, typename Alloc = std::allocator<T>>
@@ -21,7 +22,6 @@ private:
     size_type readIdx_ {};
 
     std::mutex mut;
-    std::condition_variable cv;
 
 public:
 
@@ -33,10 +33,7 @@ public:
 
     explicit spsc_queue1(size_type capacity)
         : capacity_(capacity)
-        , ring_(allocator_traits::allocate(alloc_, capacity)) {
-        // one unused slot to disambiguate empty/full
-        capacity_++;
-    }
+        , ring_(allocator_traits::allocate(alloc_, capacity)) {}
 
     spsc_queue1(size_type capacity, allocator_type alloc)
         : capacity_(capacity)
@@ -45,40 +42,37 @@ public:
 
     ~spsc_queue1() {
         while(!empty()) {
-            ring_[readIdx_ % capacity_].~T();
-            ++readIdx_;
+            T val {};
+            pop(val);
         }
         allocator_traits::deallocate(alloc_, ring_, capacity_);
     }
 
     auto push(const value_type& val) {
         std::scoped_lock lock(mut);
-        if (writeIdx_ + 1 == readIdx_) {
+        auto nextWriteIdx = writeIdx_ + 1;
+        if (nextWriteIdx == capacity_)
+            nextWriteIdx = 0;
+        if (nextWriteIdx == readIdx_) {
             return false;
         }
-        const bool wasEmpty = writeIdx_ == readIdx_;
-        new (ring_[writeIdx_]) T(val);
-        ++writeIdx_;
-        if (writeIdx_ == capacity_)
-            writeIdx_ = 0;
-        // only when writeIdx == readIdx, will there be contention
-        if (wasEmpty)
-            cv.notify_one();
+        new (&ring_[writeIdx_]) T(val);
+        writeIdx_ = nextWriteIdx;
         return true;
     }
 
     // exception safety: accept a reference instead of return by value
     // if copy constructor of by-return value throws, value is lost as it has been removed from queue
-    void pop(value_type& val) {
-        std::unique_lock lock(mut);
-        // if empty, wait for write
-        while(writeIdx_ == readIdx_)
-            cv.wait(lock);
+    bool pop(value_type& val) {
+        std::scoped_lock lock(mut);
+        if (readIdx_ == writeIdx_)
+            return false;
         val = ring_[readIdx_];
         ring_[readIdx_].~T();
         ++readIdx_;
         if (readIdx_ == capacity_)
             readIdx_ = 0;
+        return true;
     }
 
     auto front() noexcept {
