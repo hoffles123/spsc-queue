@@ -17,11 +17,10 @@ private:
     size_type capacity_;
     allocator_type alloc_;
     value_type* ring_;
+    std::mutex mut;
 
     size_type writeIdx_ {};
     size_type readIdx_ {};
-
-    std::mutex mut;
 
 public:
 
@@ -49,10 +48,10 @@ public:
     }
 
     auto push(const value_type& val) {
-        std::scoped_lock lock(mut);
         auto nextWriteIdx = writeIdx_ + 1;
         if (nextWriteIdx == capacity_)
             nextWriteIdx = 0;
+        std::scoped_lock lock(mut);
         if (nextWriteIdx == readIdx_) {
             return false;
         }
@@ -62,7 +61,8 @@ public:
     }
 
     // exception safety: accept a reference instead of return by value
-    // if copy constructor of by-return value throws, value is lost as it has been removed from queue
+    // if copy constructor of by-return value throws,
+    // value is lost as it has been removed from queue
     bool pop(value_type& val) {
         std::scoped_lock lock(mut);
         if (readIdx_ == writeIdx_)

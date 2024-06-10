@@ -1,6 +1,7 @@
 #include <benchmark/benchmark.h>
 #include <thread>
 #include "mystl/spscqueue1.h"
+#include "mystl/spscqueue2.h"
 
 void pinThread(int cpu) {
     if (cpu < 0) {
@@ -54,6 +55,7 @@ void BM_SPSCQueue(benchmark::State& state) {
 }
 
 BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue1);
+BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue2);
 
 BENCHMARK_MAIN();
 

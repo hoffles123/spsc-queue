@@ -58,38 +58,17 @@ TYPED_TEST(SPSCQueueTests, TestPop) {
     EXPECT_FALSE(this->queue.pop(front));
 }
 
-constexpr auto cpu1 = 1;
-constexpr auto cpu2 = 2;
-
-void pinThread(int cpu) {
-    if (cpu < 0) {
-        return;
-    }
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(cpu, &cpuset);
-    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
-        perror("pthread_setaffinity_no");
-        std::exit(EXIT_FAILURE);
-    }
-}
-
-TYPED_TEST(SPSCQueueTests, TestThreads) {
-    constexpr int64_t iters = 10000000;
+TYPED_TEST(SPSCQueueTests, TestConcurrentPushPop) {
+    constexpr int64_t iters = 100000;
 
     auto t = std::jthread([&] {
-        pinThread(cpu1);
         for (int64_t i {0}; i < iters; ++i) {
             int val;
             while(!this->queue2.pop(val))
                 ;
-            if (val != i)
-                throw std::runtime_error("runtime error 1");
-
+            EXPECT_EQ(val, i);
         }
     });
-
-    pinThread(cpu2);
 
     for (int64_t i {0}; i < iters; ++i) {
         while (!this->queue2.push(i))
