@@ -45,7 +45,7 @@ void BM_SPSCQueue(benchmark::State& state) {
     auto value = value_type {};
     pinThread(cpu2);
     for (auto _ : state) {
-        while(auto again = !q.push(value))
+        while(!q.push(value))
             ;
         ++value;
     }

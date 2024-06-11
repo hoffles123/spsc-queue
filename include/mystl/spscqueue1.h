@@ -19,8 +19,8 @@ private:
     value_type* ring_;
     std::mutex mut;
 
-    size_type writeIdx_ {};
-    size_type readIdx_ {};
+    size_type writeIdx_ {0};
+    size_type readIdx_ {0};
 
 public:
 
@@ -32,12 +32,12 @@ public:
 
     explicit spsc_queue1(size_type capacity)
         : capacity_(capacity)
-        , ring_(allocator_traits::allocate(alloc_, capacity)) {}
+        , ring_(allocator_traits::allocate(alloc_, capacity_)) {}
 
     spsc_queue1(size_type capacity, allocator_type alloc)
         : capacity_(capacity)
         , alloc_(alloc)
-        , ring_(allocator_traits::allocate(alloc, capacity)) {}
+        , ring_(allocator_traits::allocate(alloc, capacity_)) {}
 
     ~spsc_queue1() {
         while(!empty()) {

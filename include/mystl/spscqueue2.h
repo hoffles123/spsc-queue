@@ -4,7 +4,7 @@
 #include <queue>
 #include <atomic>
 
-// lock-based spsc queue
+// basic lock-free spsc queue
 template<typename T, typename Alloc = std::allocator<T>>
 class spsc_queue2 {
 public:
@@ -18,8 +18,8 @@ private:
     allocator_type alloc_;
     value_type* ring_;
 
-    std::atomic<size_t> writeIdx_ {};
-    std::atomic<size_t> readIdx_ {};
+    std::atomic<size_t> writeIdx_ {0};
+    std::atomic<size_t> readIdx_ {0};
 
 public:
 
@@ -31,12 +31,12 @@ public:
 
     explicit spsc_queue2(size_type capacity)
             : capacity_(capacity)
-            , ring_(allocator_traits::allocate(alloc_, capacity)) {}
+            , ring_(allocator_traits::allocate(alloc_, capacity_)) {}
 
     spsc_queue2(size_type capacity, allocator_type alloc)
             : capacity_(capacity)
             , alloc_(alloc)
-            , ring_(allocator_traits::allocate(alloc, capacity)) {}
+            , ring_(allocator_traits::allocate(alloc, capacity_)) {}
 
     ~spsc_queue2() {
         while(!empty()) {
@@ -74,17 +74,20 @@ public:
         return true;
     }
 
-    auto front() noexcept {
-        return ring_[readIdx_];
+    auto front() const noexcept {
+        auto readIdx = readIdx_.load(std::memory_order_relaxed);
+        return ring_[readIdx];
     }
 
-    auto size() noexcept {
-        auto diff = writeIdx_ - readIdx_;
+    auto size() const noexcept {
+        auto readIdx = readIdx_.load(std::memory_order_acquire);
+        auto writeIdx = writeIdx_.load(std::memory_order_acquire);
+        auto diff = writeIdx - readIdx;
         return diff < 0 ? diff + capacity_ : diff;
     }
 
-    auto empty() noexcept {
-        return writeIdx_ == readIdx_;
+    auto empty() const noexcept {
+        return size() == 0;
     }
 
     auto capacity() const noexcept {
