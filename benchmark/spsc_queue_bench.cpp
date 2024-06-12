@@ -2,6 +2,8 @@
 #include <thread>
 #include "mystl/spscqueue1.h"
 #include "mystl/spscqueue2.h"
+#include "mystl/spscqueue3.h"
+#include "mystl/rigtorp1.h"
 
 void pinThread(int cpu) {
     if (cpu < 0) {
@@ -21,7 +23,7 @@ constexpr auto cpu2 = 2;
 
 template<template<typename> class SPSCQueueT>
 void BM_SPSCQueue(benchmark::State& state) {
-    using SPSCQueueType = SPSCQueueT<int64_t>;
+    using SPSCQueueType = SPSCQueueT<int>;
     using value_type = typename SPSCQueueType::value_type;
 
     constexpr size_t queueSize = 100000;
@@ -54,8 +56,10 @@ void BM_SPSCQueue(benchmark::State& state) {
     q.push(-1);
 }
 
-BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue1);
+//BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue1);
 BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue2);
+BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue3);
+BENCHMARK_TEMPLATE(BM_SPSCQueue, ringbuffer1);
 
 BENCHMARK_MAIN();
 

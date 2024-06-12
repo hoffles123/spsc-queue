@@ -2,6 +2,7 @@
 #include <thread>
 #include "mystl/spscqueue1.h"
 #include "mystl/spscqueue2.h"
+#include "mystl/spscqueue3.h"
 
 template<typename SPSCQueueT>
 class TestBase : public testing::Test {
@@ -17,7 +18,8 @@ using SPSCQueueTests = TestBase<SPSCQueueT>;
 
 using SPSCQueueTypes = ::testing::Types<
         spsc_queue1<int>,
-        spsc_queue2<int>
+        spsc_queue2<int>,
+        spsc_queue3<int>
     >;
 
 TYPED_TEST_SUITE(SPSCQueueTests, SPSCQueueTypes);
