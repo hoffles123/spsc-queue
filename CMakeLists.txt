@@ -14,5 +14,7 @@ enable_testing()
 add_subdirectory(test)
 add_subdirectory(benchmark)
 
+add_executable(main main.cpp)
+
 
 

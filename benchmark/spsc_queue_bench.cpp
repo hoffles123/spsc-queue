@@ -57,8 +57,8 @@ void BM_SPSCQueue(benchmark::State& state) {
 }
 
 //BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue1);
-BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue2);
-BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue3);
+//BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue2);
+//BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue3);
 BENCHMARK_TEMPLATE(BM_SPSCQueue, ringbuffer1);
 
 BENCHMARK_MAIN();

@@ -84,7 +84,7 @@ public:
         return capacity_ - 1;
     }
 
-private:
+//private:
     size_type capacity_;
     allocator_type alloc_;
     value_type* ring_;

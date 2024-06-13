@@ -13,7 +13,7 @@ public:
     using allocator_type = Alloc;
     using allocator_traits = std::allocator_traits<Alloc>;
 
-private:
+//private:
     size_type capacity_;
     allocator_type alloc_;
     value_type* ring_;
