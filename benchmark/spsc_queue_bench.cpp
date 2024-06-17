@@ -1,65 +1,54 @@
 #include <benchmark/benchmark.h>
 #include <thread>
+#include <iostream>
+
+#include "pinToCPU.h"
 #include "mystl/spscqueue1.h"
 #include "mystl/spscqueue2.h"
 #include "mystl/spscqueue3.h"
-#include "mystl/rigtorp1.h"
 
-void pinThread(int cpu) {
-    if (cpu < 0) {
-        return;
-    }
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(cpu, &cpuset);
-    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
-        perror("pthread_setaffinity_no");
-        std::exit(EXIT_FAILURE);
-    }
-}
+constexpr auto cpu1 = 0;
+constexpr auto cpu2 = 3;
 
-constexpr auto cpu1 = 1;
-constexpr auto cpu2 = 2;
 
 template<template<typename> class SPSCQueueT>
 void BM_SPSCQueue(benchmark::State& state) {
     using SPSCQueueType = SPSCQueueT<int>;
-    using value_type = typename SPSCQueueType::value_type;
 
     constexpr size_t queueSize = 100000;
 
     SPSCQueueType q(queueSize);
 
-    auto t = std::jthread([&] {
+    auto consumer = std::jthread([&] {
         pinThread(cpu1);
-        for (auto i = value_type{};; ++i) {
-            value_type val;
-            while(!q.pop(val))
+        for (int i {0};; ++ i) {
+            while(q.empty())
                 ;
-            if (val == -1) {
+            if (q.front() == -1)
                 break;
-            }
-            if (val != i)
-                throw std::runtime_error("runtime error 1");
+            if (q.front() != i)
+                throw std::runtime_error("wrong value in queue");
+            q.pop();
         }
     });
 
-    auto value = value_type {};
+    int count {0};
     pinThread(cpu2);
     for (auto _ : state) {
-        while(!q.push(value))
-            ;
-        ++value;
+        q.push(count);
+        count++;
     }
-    state.counters["ops/sec"] = benchmark::Counter(double(value), benchmark::Counter::kIsRate);
+
+    assert(q.empty() && "queue is not empty");
+    state.counters["ops/sec"] = benchmark::Counter(static_cast<double>(count),
+                                                   benchmark::Counter::kIsRate);
     state.PauseTiming();
     q.push(-1);
 }
 
-//BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue1);
-//BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue2);
-//BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue3);
-BENCHMARK_TEMPLATE(BM_SPSCQueue, ringbuffer1);
+BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue1);
+BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue2);
+BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue3);
 
 BENCHMARK_MAIN();
 

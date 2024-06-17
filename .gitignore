@@ -1,5 +1,4 @@
 .idea
-devbox-debug
-devbox-release
+cmake-*
 debug
 release

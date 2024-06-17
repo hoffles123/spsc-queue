@@ -18,7 +18,8 @@ target_compile_options(spsc_queue_test PRIVATE
 target_link_libraries(spsc_queue_test
         PRIVATE
         GTest::gtest_main
-        mystl::lib)
+        mystl::lib
+)
 
 target_link_options(spsc_queue_test PRIVATE
         -fsanitize=address
