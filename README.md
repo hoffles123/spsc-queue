@@ -1,6 +1,6 @@
 # spsc-queue
 SPSC queues are circular buffers that are guaranteed to only have one reader writer pair. 
-They are often used as a determinisitc message passing mechanism to decouple data producers and consumers.
+They are often used as a deterministic message passing mechanism to decouple data producers and consumers.
 A common use case is to buffer data streams in real-time systems such as receiving data packets from a network.
 
 ## Implementation
