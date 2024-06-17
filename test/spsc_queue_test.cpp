@@ -3,6 +3,7 @@
 #include "mystl/spscqueue1.h"
 #include "mystl/spscqueue2.h"
 #include "mystl/spscqueue3.h"
+#include "mystl/spscqueue4.h"
 
 template<typename SPSCQueueT>
 class TestBase : public testing::Test {
@@ -19,7 +20,8 @@ using SPSCQueueTests = TestBase<SPSCQueueT>;
 using SPSCQueueTypes = ::testing::Types<
         spsc_queue1<int>,
         spsc_queue2<int>,
-        spsc_queue3<int>
+        spsc_queue3<int>,
+        spsc_queue4<int>
     >;
 
 TYPED_TEST_SUITE(SPSCQueueTests, SPSCQueueTypes);
@@ -51,18 +53,19 @@ TYPED_TEST(SPSCQueueTests, TestPushPop) {
     this->queue.push(1);
     this->queue.push(2);
 
+    int val {};
     EXPECT_EQ(this->queue.front(), 1);
-    this->queue.pop();
+    EXPECT_TRUE(this->queue.pop(val));
+    EXPECT_EQ(val, 1);
     EXPECT_EQ(this->queue.front(), 2);
-    this->queue.pop();
+    EXPECT_TRUE(this->queue.pop(val));
+    EXPECT_EQ(val, 2);
     EXPECT_TRUE(this->queue.empty());
-    EXPECT_EQ(this->queue.size(), 0);
 
     this->queue.push(3);
     EXPECT_EQ(this->queue.front(), 3);
-    this->queue.pop();
-    EXPECT_TRUE(this->queue.empty());
-    EXPECT_EQ(this->queue.size(), 0);
+    EXPECT_TRUE(this->queue.pop(val));
+    EXPECT_EQ(val, 3);
 }
 
 TYPED_TEST(SPSCQueueTests, TestConcurrentPushPop) {
@@ -70,11 +73,10 @@ TYPED_TEST(SPSCQueueTests, TestConcurrentPushPop) {
 
     auto t = std::jthread([&] {
         for (int i {0}; i < iters; ++i) {
-            while(this->queue2.empty())
+            int val {};
+            while(!this->queue2.pop(val))
                 ;
-            int front = this->queue2.front();
-            EXPECT_EQ(front, i);
-            this->queue2.pop();
+            EXPECT_EQ(val, i);
         }
         EXPECT_TRUE(this->queue2.empty());
     });

@@ -30,8 +30,8 @@ public:
             , ring_(allocator_traits::allocate(alloc, capacity + 1)) {}
 
     ~spsc_queue2() {
-        while(!empty()) {
-            pop();
+        value_type val;
+        while(pop(val)) {
         }
         allocator_traits::deallocate(alloc_, ring_, capacity_);
     }
@@ -47,15 +47,17 @@ public:
         writeIdx_.store(nextWriteIdx, std::memory_order_release);
     }
 
-    void pop() {
+    bool pop(reference val) {
         auto readIdx = readIdx_.load(std::memory_order_relaxed);
-        assert(readIdx != writeIdx_.load(std::memory_order_acquire) &&
-            "queue cannot be empty when popping");
+        if (readIdx == writeIdx_.load(std::memory_order_acquire))
+            return false;
+        val = ring_[readIdx];
         ring_[readIdx].~T();
         auto nextReadIdx = readIdx + 1;
         if (nextReadIdx == capacity_)
             nextReadIdx = 0;
         readIdx_.store(nextReadIdx, std::memory_order_release);
+        return true;
     }
 
     reference front() const noexcept {

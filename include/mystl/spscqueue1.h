@@ -31,9 +31,9 @@ public:
         , ring_(allocator_traits::allocate(alloc, capacity + 1)) {}
 
     ~spsc_queue1() {
-        while(!empty()) {
-            pop();
-        }
+        value_type val;
+        while(pop(val))
+            ;
         allocator_traits::deallocate(alloc_, ring_, capacity_);
     }
 
@@ -47,17 +47,20 @@ public:
         writeIdx_ = nextWriteIdx;
     }
 
-    void pop() {
+    bool pop(reference val) {
         std::scoped_lock lock(mut);
-        assert(writeIdx_ != readIdx_ && "queue cannot be empty when popping");
+        if (writeIdx_ == readIdx_)
+            return false;
         auto nextWriteIdx = getNextWriteIdx();
         bool wasFull = nextWriteIdx == readIdx_;
+        val = ring_[readIdx_];
         ring_[readIdx_].~T();
         ++readIdx_;
         if (readIdx_ == capacity_)
             readIdx_ = 0;
         if (wasFull)
             cv.notify_one();
+        return true;
     }
 
     reference front() noexcept {

@@ -3,10 +3,11 @@
 #include <memory>
 #include <queue>
 #include <atomic>
+#include <cassert>
 
-// add cache alignment and padding
+// add idx caches
 template<typename T, typename Alloc = std::allocator<T>>
-class spsc_queue3 {
+class spsc_queue4 {
 public:
     using value_type = T;
     using reference = T&;
@@ -15,21 +16,21 @@ public:
     using allocator_traits = std::allocator_traits<Alloc>;
 
     // non-copyable and non-movable
-    spsc_queue3(const spsc_queue3&) = delete;
-    spsc_queue3& operator=(const spsc_queue3&) = delete;
-    spsc_queue3(spsc_queue3&&) = delete;
-    spsc_queue3&& operator=(spsc_queue3&&) = delete;
+    spsc_queue4(const spsc_queue4&) = delete;
+    spsc_queue4& operator=(const spsc_queue4&) = delete;
+    spsc_queue4(spsc_queue4&&) = delete;
+    spsc_queue4&& operator=(spsc_queue4&&) = delete;
 
-    explicit spsc_queue3(size_type capacity)
+    explicit spsc_queue4(size_type capacity)
             : capacity_(capacity + 1)
             , ring_(allocator_traits::allocate(alloc_, capacity_ + 2 * capPadding)) {}
 
-    spsc_queue3(size_type capacity, allocator_type alloc)
+    spsc_queue4(size_type capacity, allocator_type alloc)
             : capacity_(capacity + 1)
             , alloc_(alloc)
             , ring_(allocator_traits::allocate(alloc, capacity_ + 2 * capPadding)) {}
 
-    ~spsc_queue3() {
+    ~spsc_queue4() {
         value_type val;
         while(pop(val))
             ;
@@ -41,16 +42,19 @@ public:
         auto nextWriteIdx = writeIdx + 1;
         if (nextWriteIdx == capacity_)
             nextWriteIdx = 0;
-        while(nextWriteIdx == readIdx_.load(std::memory_order_acquire))
-            ; // spin lock
+        while(nextWriteIdx == readIdxCache_)
+            readIdxCache_ = readIdx_.load(std::memory_order_acquire); // spin lock
         new (&ring_[writeIdx + capPadding]) T(val);
         writeIdx_.store(nextWriteIdx, std::memory_order_release);
     }
 
     bool pop(reference val) {
         auto readIdx = readIdx_.load(std::memory_order_relaxed);
-        if (readIdx == writeIdx_.load(std::memory_order_acquire))
-            return false;
+        if (readIdx == writeIdxCache_) {
+            writeIdxCache_ = writeIdx_.load(std::memory_order_acquire);
+            if (readIdx == writeIdxCache_)
+                return false;
+        }
         val = ring_[readIdx + capPadding];
         ring_[readIdx + capPadding].~T();
         auto nextReadIdx = readIdx + 1;
@@ -97,4 +101,6 @@ private:
 
     alignas(cacheLineSize) std::atomic<size_t> writeIdx_ {0};
     alignas(cacheLineSize) std::atomic<size_t> readIdx_ {0};
+    alignas(cacheLineSize) size_t writeIdxCache_ {0};
+    alignas(cacheLineSize) size_t readIdxCache_ {0};
 };

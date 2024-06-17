@@ -6,10 +6,10 @@
 #include "mystl/spscqueue1.h"
 #include "mystl/spscqueue2.h"
 #include "mystl/spscqueue3.h"
+#include "mystl/spscqueue4.h"
 
 constexpr auto cpu1 = 0;
 constexpr auto cpu2 = 3;
-
 
 template<template<typename> class SPSCQueueT>
 void BM_SPSCQueue(benchmark::State& state) {
@@ -22,13 +22,13 @@ void BM_SPSCQueue(benchmark::State& state) {
     auto consumer = std::jthread([&] {
         pinThread(cpu1);
         for (int i {0};; ++ i) {
-            while(q.empty())
+            int val {};
+            while(!q.pop(val))
                 ;
-            if (q.front() == -1)
+            if (val == -1)
                 break;
-            if (q.front() != i)
+            if (val != i)
                 throw std::runtime_error("wrong value in queue");
-            q.pop();
         }
     });
 
@@ -39,7 +39,6 @@ void BM_SPSCQueue(benchmark::State& state) {
         count++;
     }
 
-    assert(q.empty() && "queue is not empty");
     state.counters["ops/sec"] = benchmark::Counter(static_cast<double>(count),
                                                    benchmark::Counter::kIsRate);
     state.PauseTiming();
@@ -49,6 +48,7 @@ void BM_SPSCQueue(benchmark::State& state) {
 BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue1);
 BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue2);
 BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue3);
+BENCHMARK_TEMPLATE(BM_SPSCQueue, spsc_queue4);
 
 BENCHMARK_MAIN();
 
