@@ -20,6 +20,7 @@ Identical to spscqueue3, but with caching of read and write indexes. This is to 
 
 
 ## Benchmark
+Benchmarked on GCP 2-core
 ```
 ------------------------------------------------------------------------------------
 Benchmark                          Time             CPU   Iterations UserCounters...
